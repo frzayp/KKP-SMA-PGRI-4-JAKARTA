@@ -1,0 +1,7 @@
+/build/
+/dist/
+/nbproject/private/
+*.class
+*.log
+# Jangan pernah commit file ini (berisi password)
+config.properties

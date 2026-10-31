@@ -1,0 +1,6 @@
+db.host=mysql-2557f2cd-siakad-pgri4.h.aivencloud.com
+db.port=23895
+db.name=defaultdb
+db.user=avnadmin
+db.password=GANTI_DENGAN_PASSWORD_ANDA
+db.ssl=true
