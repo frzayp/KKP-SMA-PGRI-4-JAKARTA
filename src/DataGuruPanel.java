@@ -82,6 +82,8 @@ public class DataGuruPanel extends JPanel {
         formPanel.add(new JLabel("Kode Guru:"), gbc);
         gbc.gridx = 1; gbc.weightx = 0.8;
         kodeGuruField = new JTextField();
+        kodeGuruField.setEditable(false); // Dibuat read-only karena otomatis
+        kodeGuruField.setBackground(new Color(240, 240, 240));
         formPanel.add(kodeGuruField, gbc);
         
         gbc.gridx = 0; gbc.gridy = 1;
@@ -186,6 +188,7 @@ public class DataGuruPanel extends JPanel {
         refreshBtn.addActionListener(e -> {
             loadData();
             searchField.setText("");
+            resetForm();
         });
         backBtn.addActionListener(e -> {
             cardLayout.show(mainPanel, "menuUtama");
@@ -205,11 +208,29 @@ public class DataGuruPanel extends JPanel {
                     namaField.setText(tableModel.getValueAt(row, 2).toString());
                     jkCombo.setSelectedItem(tableModel.getValueAt(row, 3).toString());
                     mapelField.setText(tableModel.getValueAt(row, 4).toString());
+                    kodeGuruField.setEditable(false); // Pastikan tidak bisa diedit saat mode Ubah
                 }
             }
         });
         
         updateTopStats();
+        resetForm(); // Panggil resetForm untuk generate kode pertama kali
+    }
+    
+    // ================= METHOD BARU: GENERATE KODE OTOMATIS =================
+    private String generateKodeGuru() {
+        int max = 0;
+        for (String[] guru : Database.getAllGuru()) {
+            try {
+                int kode = Integer.parseInt(guru[0]);
+                if (kode > max) {
+                    max = kode;
+                }
+            } catch (NumberFormatException e) {
+                // Abaikan jika ada kode yang bukan angka (misal "12a")
+            }
+        }
+        return String.valueOf(max + 1);
     }
     
     private JPanel createStatCard(String icon, String title, String defaultValue, String subtitle) {
@@ -334,19 +355,28 @@ public class DataGuruPanel extends JPanel {
     }
     
     private void tambahData() {
-        String kodeGuru = kodeGuruField.getText().trim();
+        // Kode Guru diambil otomatis dari field yang sudah di-generate
+        String kodeGuru = kodeGuruField.getText().trim(); 
         String nama = namaField.getText().trim();
         String jk = (String) jkCombo.getSelectedItem();
         String mapel = mapelField.getText().trim();
         
-        if (kodeGuru.isEmpty() || nama.isEmpty() || mapel.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Semua field harus diisi!");
+        if (nama.isEmpty() || mapel.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Nama dan Mata Pelajaran harus diisi!");
             return;
+        }
+        
+        // Validasi ganda (untuk memastikan tidak ada bentrok)
+        for (String[] guru : Database.getAllGuru()) {
+            if (guru[0].equals(kodeGuru)) {
+                JOptionPane.showMessageDialog(this, "Kode Guru sudah ada di database! Silakan klik REFRESH.");
+                return;
+            }
         }
         
         if (Database.tambahGuru(kodeGuru, jk, nama, mapel)) {
             loadData();
-            resetForm();
+            resetForm(); // Setelah tambah, kode akan otomatis generate angka selanjutnya
             JOptionPane.showMessageDialog(this, "Data guru berhasil ditambahkan!");
         } else {
             JOptionPane.showMessageDialog(this, "Gagal menambahkan data!");
@@ -361,19 +391,20 @@ public class DataGuruPanel extends JPanel {
         }
         
         String kodeGuruLama = tableModel.getValueAt(row, 1).toString();
-        String kodeGuruBaru = kodeGuruField.getText().trim();
+        String kodeGuruBaru = kodeGuruField.getText().trim(); // Tetap sama
         String nama = namaField.getText().trim();
         String jk = (String) jkCombo.getSelectedItem();
         String mapel = mapelField.getText().trim();
         
-        if (kodeGuruBaru.isEmpty() || nama.isEmpty() || mapel.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Semua field harus diisi!");
+        if (nama.isEmpty() || mapel.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Nama dan Mata Pelajaran harus diisi!");
             return;
         }
         
         if (Database.updateGuru(kodeGuruLama, kodeGuruBaru, jk, nama, mapel)) {
             loadData();
             JOptionPane.showMessageDialog(this, "Data guru berhasil diubah!");
+            resetForm(); // Kembalikan ke mode tambah data
         } else {
             JOptionPane.showMessageDialog(this, "Gagal mengubah data!");
         }
@@ -391,7 +422,7 @@ public class DataGuruPanel extends JPanel {
             String kodeGuru = tableModel.getValueAt(row, 1).toString();
             if (Database.hapusGuru(kodeGuru)) {
                 loadData();
-                resetForm();
+                resetForm(); // Generate kode baru untuk form
                 JOptionPane.showMessageDialog(this, "Data guru dihapus!");
             } else {
                 JOptionPane.showMessageDialog(this, "Gagal menghapus data!");
@@ -400,10 +431,15 @@ public class DataGuruPanel extends JPanel {
     }
     
     private void resetForm() {
-        kodeGuruField.setText("");
+        // ================= PERUBAHAN UTAMA =================
+        // Otomatis mengisi Kode Guru dengan angka + 1 dari data terakhir
+        kodeGuruField.setText(generateKodeGuru()); 
+        kodeGuruField.setEditable(false);
+        // ===================================================
+        
         namaField.setText("");
         jkCombo.setSelectedIndex(0);
         mapelField.setText("");
-        kodeGuruField.requestFocus();
+        namaField.requestFocus();
     }
 }

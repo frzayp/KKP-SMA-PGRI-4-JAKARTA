@@ -7,7 +7,8 @@ public class Database {
     // ==================== SISWA ====================
     public static List<String[]> getAllSiswa() {
         List<String[]> list = new ArrayList<>();
-        String query = "SELECT nis, nama, jk, tempat_lahir, tgl_lahir, agama, alamat, kelas, tahun_masuk FROM tbl_siswa ORDER BY nis";
+        // PERBAIKAN: Urutkan berdasarkan NIS sebagai angka, lalu nama
+        String query = "SELECT nis, nama, jk, tempat_lahir, tgl_lahir, agama, alamat, kelas, tahun_masuk FROM tbl_siswa ORDER BY CAST(nis AS UNSIGNED), nama";
         try (Statement stmt = KoneksiDB.getConnection().createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
             while (rs.next()) {
@@ -94,6 +95,7 @@ public class Database {
     
     public static List<String[]> getSiswaByKelas(String kelas) {
         List<String[]> list = new ArrayList<>();
+        // PERBAIKAN: Urutkan berdasarkan nama siswa
         String query = "SELECT nis, nama, jk, tempat_lahir, tgl_lahir, agama, alamat, kelas, tahun_masuk FROM tbl_siswa WHERE kelas = ? ORDER BY nama";
         try (PreparedStatement pstmt = KoneksiDB.getConnection().prepareStatement(query)) {
             pstmt.setString(1, kelas);
@@ -118,7 +120,9 @@ public class Database {
     // ==================== GURU ====================
     public static List<String[]> getAllGuru() {
         List<String[]> list = new ArrayList<>();
-        String query = "SELECT kode_guru, jk, nama_guru, mapel, status FROM tbl_guru ORDER BY kode_guru";
+        // PERBAIKAN UTAMA: Gunakan CAST agar urutan kode guru sesuai angka (1, 2, 3, 10, 11)
+        // Lalu diurutkan berdasarkan nama_guru
+        String query = "SELECT kode_guru, jk, nama_guru, mapel, status FROM tbl_guru ORDER BY CAST(kode_guru AS UNSIGNED), nama_guru";
         try (Statement stmt = KoneksiDB.getConnection().createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
             while (rs.next()) {

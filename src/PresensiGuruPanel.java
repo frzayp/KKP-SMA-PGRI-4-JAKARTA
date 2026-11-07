@@ -1,6 +1,7 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -116,7 +117,7 @@ public class PresensiGuruPanel extends JPanel {
         tableTitle.setForeground(new Color(41, 128, 185));
         tablePanel.add(tableTitle, BorderLayout.NORTH);
         
-        String[] cols = {"ID", "Tanggal", "NUPTK", "Nama Guru", "Status", "Keterangan", "Dicatat Oleh"};
+        String[] cols = {"ID", "Tanggal", "Kode Guru", "Nama Guru", "Status", "Keterangan", "Dicatat Oleh"};
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -135,6 +136,28 @@ public class PresensiGuruPanel extends JPanel {
         header.setFont(new Font("Segoe UI Emoji", Font.BOLD, 12));
         header.setBackground(new Color(41, 128, 185));
         header.setForeground(Color.WHITE);
+        
+        // ================= FITUR PENGURUTAN TABEL =================
+        // 1. Izinkan user klik judul kolom untuk mengurutkan (Sortir manual)
+        table.setAutoCreateRowSorter(true);
+        
+        // 2. Paksa urutkan otomatis berdasarkan Tanggal (Descending) dan NUPTK (Ascending) saat data dimuat
+        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(tableModel);
+        sorter.setComparator(1, (String s1, String s2) -> s2.compareTo(s1)); // Kolom 1 (Tanggal) dibalik (DESC)
+        sorter.setComparator(2, (String s1, String s2) -> {
+            try {
+                return Integer.compare(Integer.parseInt(s1), Integer.parseInt(s2)); // Kolom 2 (NUPTK) sebagai angka
+            } catch (NumberFormatException e) {
+                return s1.compareTo(s2);
+            }
+        });
+        table.setRowSorter(sorter);
+        
+        java.util.List<javax.swing.RowSorter.SortKey> sortKeys = new java.util.ArrayList<>();
+        sortKeys.add(new javax.swing.RowSorter.SortKey(1, javax.swing.SortOrder.DESCENDING)); // Tanggal
+        sortKeys.add(new javax.swing.RowSorter.SortKey(2, javax.swing.SortOrder.ASCENDING));  // NUPTK
+        sorter.setSortKeys(sortKeys);
+        // ==========================================================
         
         JScrollPane scroll = new JScrollPane(table);
         tablePanel.add(scroll, BorderLayout.CENTER);
@@ -159,10 +182,13 @@ public class PresensiGuruPanel extends JPanel {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 int row = table.getSelectedRow();
                 if (row != -1) {
-                    selectedId = Integer.parseInt(tableModel.getValueAt(row, 0).toString());
-                    tanggalField.setText(tableModel.getValueAt(row, 1).toString());
+                    // Konversi row view ke model (karena ada sorting)
+                    int modelRow = table.convertRowIndexToModel(row);
                     
-                    String nuptk = tableModel.getValueAt(row, 2).toString();
+                    selectedId = Integer.parseInt(tableModel.getValueAt(modelRow, 0).toString());
+                    tanggalField.setText(tableModel.getValueAt(modelRow, 1).toString());
+                    
+                    String nuptk = tableModel.getValueAt(modelRow, 2).toString();
                     for (int i = 0; i < guruCombo.getItemCount(); i++) {
                         if (guruCombo.getItemAt(i).startsWith(nuptk)) {
                             guruCombo.setSelectedIndex(i);
@@ -170,8 +196,8 @@ public class PresensiGuruPanel extends JPanel {
                         }
                     }
                     
-                    statusCombo.setSelectedItem(tableModel.getValueAt(row, 4).toString());
-                    keteranganField.setText(tableModel.getValueAt(row, 5).toString());
+                    statusCombo.setSelectedItem(tableModel.getValueAt(modelRow, 4).toString());
+                    keteranganField.setText(tableModel.getValueAt(modelRow, 5).toString());
                 }
             }
         });
@@ -200,6 +226,7 @@ public class PresensiGuruPanel extends JPanel {
     
     private void loadData() {
         tableModel.setRowCount(0);
+        // Method Database.getAllPresensiGuru() sudah menggunakan ORDER BY tanggal DESC, CAST(kode_guru AS UNSIGNED)
         for (Object[] p : Database.getAllPresensiGuru()) {
             tableModel.addRow(p);
         }
